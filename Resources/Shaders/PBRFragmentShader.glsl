@@ -14,7 +14,7 @@ struct PointLightSource {
 	vec3 color;
 	float intensity;
 };
-uniform PointLightSource pointlightSources[2];
+uniform PointLightSource pointlightSources[100];
 uniform int pointLightCnt;
 
 in vec3 fNormal; // Shader input, linearly interpolated by default from the previous stage (here the vertex shader)
@@ -79,6 +79,7 @@ void main () {
 	}
 	for (int i=0; i < pointLightCnt; i++) {
 		PointLightSource lightSource = pointlightSources[i];
+		lightSource.position = vec3(modelViewMat * vec4(lightSource.position, 1.0));
 		vec3 lightDirection = fPosition - lightSource.position;
 		colorResponse += lightSource.intensity * vec4(GetLight(normalize(lightDirection), lightSource.color, n, v, 0.1), 1.0) / dot(lightDirection, lightDirection);
 	}

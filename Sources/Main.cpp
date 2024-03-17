@@ -21,6 +21,7 @@
 #include <memory>
 #include <algorithm>
 #include <exception>
+#include <random>
 #include <filesystem>
 
 namespace fs = std::filesystem;
@@ -207,16 +208,26 @@ void initScene () {
 	// Mesh
 	auto meshPtr = std::make_shared<Mesh> ();
 	try {
-		MeshLoader::loadOFF (meshFilename, meshPtr);
+		// MeshLoader::loadOFF (meshFilename, meshPtr);
+		MeshLoader::loadOBJ (meshFilename, meshPtr);
 	} catch (std::exception & e) {
 		exitOnCriticalError (std::string ("[Error loading mesh]") + e.what ());
 	}
 	meshPtr->computeBoundingSphere (center, meshScale);
 	auto modelPtr = std::make_shared<Model>(meshPtr, std::make_shared<Material>(glm::vec4(0.6, 0.9, 0.4, 1.0), 16, 0.2, 0.4, 0.4));
-	scenePtr->add (modelPtr);
-	scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 0.3, 1.0), glm::vec3(1.0, 1.0, 1.0), 0.7f));
+	scenePtr->add (modelPtr); 
+	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 0.3, 1.0), glm::vec3(1.0, 1.0, 1.0), 0.7f));
 	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 1.0, 0.1), glm::vec3(1.0, 0.0, 0.0), 0.2f));
-	scenePtr->add (std::make_shared<PointLight>(glm::vec3(1.0, 2.0, -3.0), glm::vec3(0.0, 1.0, 1.0), 1.5f));
+	std::random_device rd;  // Will be used to obtain a seed for the random number engine
+	std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+	std::uniform_real_distribution<float> r_dist(0, 1);
+	std::uniform_real_distribution<float> x_dist(-meshScale, meshScale);
+	std::uniform_real_distribution<float> y_dist(-meshScale, meshScale);
+	std::uniform_real_distribution<float> z_dist(-meshScale, meshScale);
+	
+	for (int i = 0; i < 10; i++) {
+		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 20.f));
+	}
 
 	// Camera
 	int width, height;

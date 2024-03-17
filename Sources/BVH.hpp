@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <functional>
 #include <iostream>
+#include <numeric>
 #include <optional>
 #include "Ray.hpp"
 
@@ -83,30 +84,35 @@ struct BoundingBox3d {
         }
     }
 
+    void update(const BoundingBox3d& other) {
+        x_min = std::min(x_min, other.x_min);
+        x_max = std::max(x_max, other.x_max);
+        y_min = std::min(y_min, other.y_min);
+        y_max = std::max(y_max, other.y_max);
+        z_min = std::min(z_min, other.z_min);
+        z_max = std::max(z_max, other.z_max);
+    }
+
 
 };
 
-ostream& operator << (ostream& out, const BoundingBox3d& box) {
-    out << "([" << box.x_min << ", " << box.x_max << "], [" << box.y_min << ", " << box.y_max << "], [" << box.z_min << ", " << box.z_max << "])";
-    return out;
-}
+std::ostream& operator << (std::ostream& out, const BoundingBox3d& box);
+
+struct Node {
+    int left_idx = -1;
+    int right_idx = -1;
+    int block_start = -1;
+    int block_size = 0;
+    BoundingBox3d box;
+
+    friend std::ostream& operator << (std::ostream& out, const Node& node) {
+        out << node.left_idx << ' ' << node.right_idx << ' ' << node.block_start << ' ' << node.block_size << ' ' << node.box;
+        return out;
+    }
+};
 
 template<typename T>
 struct BVH {
-
-    struct Node {
-        int left_idx = -1;
-        int right_idx = -1;
-        int block_start = -1;
-        int block_size = 0;
-        BoundingBox3d box;
-
-        friend std::ostream& operator << (ostream& out, const Node& node) {
-            out << node.left_idx << ' ' << node.right_idx << ' ' << node.block_start << ' ' << node.block_size << ' ' << node.box;
-            return out;
-        }
-    };
-
 
     BVH(std::vector<T> primitives): primitives(primitives) {
         indices.resize(primitives.size());
@@ -166,7 +172,7 @@ struct BVH {
         tree[v] = cur;
     }
 
-    BoundingBox3d getBox(typename vector<T>::iterator begin, typename vector<T>::iterator end) {
+    BoundingBox3d getBox(typename std::vector<T>::iterator begin, typename std::vector<T>::iterator end) {
         assert(begin != end);
         BoundingBox3d box {
             100000,

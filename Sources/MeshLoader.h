@@ -17,5 +17,6 @@ namespace MeshLoader {
 
 /// Loads an OFF mesh file. See https://en.wikipedia.org/wiki/OFF_(file_format)
 void loadOFF (const std::string & filename, std::shared_ptr<Mesh> meshPtr);
+void loadOBJ (const std::string & filename, std::shared_ptr<Mesh> meshPtr);
 
 }

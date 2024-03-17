@@ -20,6 +20,7 @@
 
 #include "Image.h"
 #include "Scene.h"
+#include "LightCut.hpp"
 
 using namespace std;
 

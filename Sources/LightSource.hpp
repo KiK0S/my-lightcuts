@@ -21,3 +21,5 @@ public:
     glm::vec3 color;
     float intensity;
 };
+
+glm::vec3 GetLight(glm::vec3 l, glm::vec3 c, glm::vec3 n, glm::vec3 v, glm::vec3 albedo, float roughness);

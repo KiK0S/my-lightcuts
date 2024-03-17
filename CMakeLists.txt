@@ -21,6 +21,10 @@ add_executable (
 	Sources/Mesh.cpp
 	Sources/MeshLoader.h
 	Sources/MeshLoader.cpp
+	Sources/LightSource.hpp
+	Sources/LightSource.cpp
+	Sources/BVH.cpp
+	Sources/BVH.hpp
 	Sources/RayTracer.h
 	Sources/RayTracer.cpp
 	Sources/Rasterizer.h
