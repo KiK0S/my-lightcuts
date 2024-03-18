@@ -118,17 +118,17 @@ void initBVH(const std::shared_ptr<Scene> scenePtr) {
 	auto camera = scenePtr->camera();
 	for (int i = 0; i < scenePtr->numOfMeshes(); i++) {
 		auto mesh = scenePtr->mesh(i)->mesh;
-		auto mvMat = camera->computeViewMatrix() * mesh->computeTransformMatrix();
-		auto nMat = glm::transpose (glm::inverse (mvMat));
+		// auto mvMat = camera->computeViewMatrix() * mesh->computeTransformMatrix();
+		// auto nMat = glm::transpose (glm::inverse (mvMat));
 		framePos = mesh->vertexPositions();
 		frameNormals = mesh->vertexNormals();
-		for (glm::vec3& p : framePos) {
-			p = glm::vec3(mvMat * glm::vec4(p, 1.0)); 
-		}
-		for (glm::vec3& n : frameNormals) {
-			n = glm::vec3(nMat * glm::vec4(n, 1.0)); 
-			n /= glm::length(n);
-		}
+		// for (glm::vec3& p : framePos) {
+		// 	p = glm::vec3(mvMat * glm::vec4(p, 1.0)); 
+		// }
+		// for (glm::vec3& n : frameNormals) {
+		// 	n = glm::vec3(nMat * glm::vec4(n, 1.0)); 
+		// 	n /= glm::length(n);
+		// }
 		auto triangles = mesh->triangleIndices();
 		std::vector<std::vector<glm::vec3>> triPos;
 		for (int i = 0; i < triangles.size(); i++) {
@@ -192,7 +192,7 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 	for (int i = 0; i < scenePtr->numOfPLights(); i++) {
 		auto light = scenePtr->pLight(i);
 		glm::vec3 pos = ray.origin + ray.direction * hit.t;
-		auto dir = pos - glm::vec3(scenePtr->camera()->computeViewMatrix() * glm::vec4(light->getTranslation(), 1.0));
+		auto dir = pos - glm::vec3(/*scenePtr->camera()->computeViewMatrix() * */ glm::vec4(light->getTranslation(), 1.0));
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		// if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
@@ -205,8 +205,8 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayHit hit) {
 	glm::vec3 pos = ray.origin + ray.direction * hit.t;
 	glm::vec3 res{0};
-	for (PointLight light : lightCutTree.getLights(pos, ray.direction, hit.normal, hit.material->albedo)) {
-		auto dir = pos - light.getTranslation();
+	for (PointLight light : lightCutTree.getLights(pos, ray.direction, hit.normal, hit.material->albedo, scenePtr->camera()->computeViewMatrix())) {
+		auto dir = pos - glm::vec3(scenePtr->camera()->computeViewMatrix() * glm::vec4(light.getTranslation(), 1.0));
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
@@ -229,14 +229,14 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr) {
     std::uniform_int_distribution<int> w_dist(0, width);
     std::uniform_int_distribution<int> h_dist(0, height);
 	initBVH(scenePtr);
-	initLightCuts(scenePtr);
-	for (int w = 0; w < width; w++) {
-		for (int h = 0; h < height; h++) {
+	// initLightCuts(scenePtr);
+	for (int w = 0; w < width - 1; w++) {
+		for (int h = 0; h < height - 1; h++) {
 	// for (int iter = 0; iter < 1; iter++) {
 	// 	int w = w_dist(gen);
 	// 	int h = h_dist(gen);
 			auto camera = scenePtr->camera();
-			Ray ray = camera->rayAt(1.0 * w / width, 1.0 * h / height);
+			Ray ray = camera->rayAt((w + 0.5) / width, (h + 0.5) / height);
 			RayHit hit = raySceneIntersectionBVH(ray, scenePtr);
 			if (hit.t != -1) {
 				(*m_imagePtr)(w, h) = glm::vec3(0.0, 0.0, 0.0);//hit.material->albedo * hit.material->ka;
@@ -248,8 +248,8 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr) {
 						(*m_imagePtr)(w, h) += GetLight(light->direction, light->color, hit.normal, glm::normalize(-pos), hit.material->albedo, 0.1) * light->intensity;
 					}
 				}
-				// (*m_imagePtr)(w, h) += GetPointLightNative(scenePtr, ray, hit);
-				(*m_imagePtr)(w, h) += GetPointLightCuts(scenePtr, ray, hit);
+				(*m_imagePtr)(w, h) += GetPointLightNative(scenePtr, ray, hit);
+				// (*m_imagePtr)(w, h) += GetPointLightCuts(scenePtr, ray, hit);
 			}
 
 		}

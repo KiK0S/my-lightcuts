@@ -17,6 +17,19 @@ struct BoundingBox3d {
     float y_max;
     float z_min;
     float z_max;
+    int longest_axis() const {
+        float dx = x_max - x_min;
+        float dy = y_max - y_min;
+        float dz = z_max - z_min;
+        if (dx >= dy && dx >= dz) {
+            return 0;
+        } else if (dy >= dz) {
+            return 1;
+        } else {
+            return 2;
+        }
+        return -1;
+    }
 
     std::pair<BoundingBox3d, BoundingBox3d> partition() const {
         float dx = x_max - x_min;
@@ -136,21 +149,31 @@ struct BVH {
         if (cur.block_size <= 2) {
             return;
         }
-        auto [l_box, r_box] = cur.box.partition();
-        int l = cur.block_start;
-        int r = cur.block_start + cur.block_size - 1;
-        while (l < r) {
-            while (l < r && l_box.contains(primitives[l])) l++;
-            while (l < r && r_box.contains(primitives[r])) r--;
-            if (l < r) {
-                std::swap(primitives[l], primitives[r]);
-                std::swap(indices[l], indices[r]);
-                l++;
-                r--;
-            }
-        }
-        int cnt_l = l - cur.block_start;
+        std::vector<int> permutation(cur.block_size);
+        std::iota(permutation.begin(), permutation.end(), 0);
+
+        int axis = cur.box.longest_axis();
+        int cnt_l = cur.block_size / 2;
         int cnt_r = cur.block_size - cnt_l;
+        std::nth_element(permutation.begin(), permutation.begin() + cnt_l - 1, permutation.end(), [this, axis](int a, int b){
+            glm::vec3 pos_a{0};
+            for (auto p : primitives[a]) {
+                pos_a += p;
+            }
+            pos_a /= primitives[a].size();
+            glm::vec3 pos_b{0};
+            for (auto p : primitives[b]) {
+                pos_b += p;
+            }
+            pos_b /= primitives[b].size();
+            return pos_a[axis] < pos_b[axis];
+        });
+        std::vector<int> backup_i(indices.begin() + cur.block_start, indices.begin() + cur.block_size + cur.block_start);
+        std::vector<T> backup_p(primitives.begin() + cur.block_start, primitives.begin() + cur.block_size + cur.block_start);
+        for (int i = 0; i < permutation.size(); i++) {
+            primitives[cur.block_start + i] = backup_p[permutation[i]];
+            indices[cur.block_start + i] = backup_i[permutation[i]];
+        }
         if (cnt_l > 0) {
             Node l_node;
             l_node.block_start = cur.block_start;

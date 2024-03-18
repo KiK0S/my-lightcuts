@@ -43,17 +43,15 @@ public:
 	/// Returns the projection matrix stemming from the camera intrinsic parameter. 
 	inline glm::mat4 computeProjectionMatrix () const {	return glm::perspective (glm::radians (m_fov), m_aspectRatio, m_near, m_far); }
 
-	inline Ray rayAt(float x, float y) {
-		float nearHeight = tan(glm::radians(m_fov / 2.0)) * m_near;
-		float nearWidth = nearHeight * m_aspectRatio;
-		return Ray{
-			getTranslation(),
-			glm::normalize(glm::vec3{
-				nearWidth * (x - 0.5f),
-				nearHeight * (y - 0.5f),
-				-m_near
-			})
-		};
+	Ray rayAt (float u, float v) {
+		glm::mat4 viewMat = inverse (computeViewMatrix());
+		glm::vec3 viewRight = normalize (glm::vec3 (viewMat[0]));
+		glm::vec3 viewUp = normalize (glm::vec3 (viewMat[1]));
+		glm::vec3 viewDir = -normalize (glm::vec3 (viewMat[2]));
+		glm::vec3 eye = glm::vec3 (viewMat[3]);
+		float w = 2.0*float (tan (glm::radians (m_fov/2.0)));
+		glm::vec3 rayDir = glm::normalize (viewDir + ((u - 0.5f) * m_aspectRatio * w) * viewRight + (v - 0.5f) * w * viewUp);  
+		return Ray{eye, rayDir};
 	}
 
 private:
