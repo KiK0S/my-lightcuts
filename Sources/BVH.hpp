@@ -155,17 +155,17 @@ struct BVH {
         int axis = cur.box.longest_axis();
         int cnt_l = cur.block_size / 2;
         int cnt_r = cur.block_size - cnt_l;
-        std::nth_element(permutation.begin(), permutation.begin() + cnt_l - 1, permutation.end(), [this, axis](int a, int b){
+        std::nth_element(permutation.begin(), permutation.begin() + cnt_l - 1, permutation.end(), [this, axis, cur](int a, int b){
             glm::vec3 pos_a{0};
-            for (auto p : primitives[a]) {
+            for (auto p : primitives[cur.block_start + a]) {
                 pos_a += p;
             }
-            pos_a /= primitives[a].size();
+            pos_a /= primitives[cur.block_start + a].size();
             glm::vec3 pos_b{0};
-            for (auto p : primitives[b]) {
+            for (auto p : primitives[cur.block_start + b]) {
                 pos_b += p;
             }
-            pos_b /= primitives[b].size();
+            pos_b /= primitives[cur.block_start + b].size();
             return pos_a[axis] < pos_b[axis];
         });
         std::vector<int> backup_i(indices.begin() + cur.block_start, indices.begin() + cur.block_size + cur.block_start);
