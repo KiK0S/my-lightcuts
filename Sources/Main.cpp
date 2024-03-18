@@ -208,8 +208,10 @@ void initScene () {
 	// Mesh
 	auto meshPtr = std::make_shared<Mesh> ();
 	try {
-		// MeshLoader::loadOFF (meshFilename, meshPtr);
-		MeshLoader::loadOBJ (meshFilename, meshPtr);
+		if (meshFilename[meshFilename.size() - 1] == 'j')
+			MeshLoader::loadOBJ (meshFilename, meshPtr);
+		if (meshFilename[meshFilename.size() - 1] == 'f')
+			MeshLoader::loadOFF (meshFilename, meshPtr);
 	} catch (std::exception & e) {
 		exitOnCriticalError (std::string ("[Error loading mesh]") + e.what ());
 	}
