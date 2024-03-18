@@ -223,9 +223,9 @@ void initScene () {
 	std::random_device rd;  // Will be used to obtain a seed for the random number engine
 	std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
 	std::uniform_real_distribution<float> r_dist(0, 1);
-	std::uniform_real_distribution<float> x_dist(-meshScale, meshScale);
-	std::uniform_real_distribution<float> y_dist(-meshScale, meshScale);
-	std::uniform_real_distribution<float> z_dist(-meshScale, meshScale);
+	std::uniform_real_distribution<float> x_dist(-meshScale / 2.0 + center[0], meshScale / 2.0 + center[0]);
+	std::uniform_real_distribution<float> y_dist(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]);
+	std::uniform_real_distribution<float> z_dist(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2]);
 	
 	for (int i = 0; i < 10; i++) {
 		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 20.f));
