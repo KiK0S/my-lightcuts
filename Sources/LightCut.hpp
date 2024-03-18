@@ -67,16 +67,17 @@ struct LightTree {
         }
     }
 
-    glm::vec3 getLight(PointLight light, glm::vec3 position, glm::vec3 direction, glm::vec3 normal, glm::vec3 albedo) {
-        auto dir = position - light.getTranslation();
+    glm::vec3 getLight(PointLight light, glm::vec3 position, glm::vec3 direction, glm::vec3 normal, glm::vec3 albedo, glm::mat4 viewMat) {
+        auto dir = position - glm::vec3(viewMat * glm::vec4(light.getTranslation(), 1.0));
 		auto dirNorm = glm::length(dir);
         return GetLight(dir / dirNorm, light.color, normal, glm::normalize(-position), albedo, 0.1) * light.intensity / dirNorm / dirNorm;
     }
 
-    std::vector<PointLight> getLights(glm::vec3 position, glm::vec3 direction,  glm::vec3 normal, glm::vec3 albedo) {
+    std::vector<PointLight> getLights(glm::vec3 position, glm::vec3 direction,  glm::vec3 normal, glm::vec3 albedo, glm::mat4 viewMat) {
         int root = tree.size() - 1;
         std::queue<int> q;
         std::vector<PointLight> res;
+        q.push(root);
         while(!q.empty()) {
             int v = q.front();
             q.pop();
@@ -85,10 +86,10 @@ struct LightTree {
                 res.push_back(lights[node.block_start]);
                 continue;
             }
-            glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo);
-            glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo) + 
-                                        getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo);
-            if (glm::length(cur_estimate - child_estimates) < 0.1) {
+            glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo, viewMat);
+            glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo, viewMat) + 
+                                        getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo, viewMat);
+            if (glm::length(cur_estimate - child_estimates) < 0.001) {
                 res.push_back(lights[node.block_start]);
             } else {
                 q.push(node.left_idx);
