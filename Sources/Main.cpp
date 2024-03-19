@@ -86,11 +86,11 @@ void printHelp () {
 }
 
 /// Adjust the ray tracer target resolution and runs it.
-void raytrace () {
+void raytrace (bool lightcuts = false) {
 	int width, height;
 	glfwGetWindowSize(windowPtr, &width, &height);
 	rayTracerPtr->setResolution (width, height);
-	rayTracerPtr->render (scenePtr);
+	rayTracerPtr->render (scenePtr, lightcuts);
 }
 
 /// Executed each time a key is entered.
@@ -110,7 +110,10 @@ void keyCallback (GLFWwindow * windowPtr, int key, int scancode, int action, int
 			isDisplayRaytracing = !isDisplayRaytracing;
 		} else if (action == GLFW_PRESS && key == GLFW_KEY_SPACE) {
 			raytrace ();
-		} else {
+		} else if (action == GLFW_PRESS && key == GLFW_KEY_R) {
+			raytrace (true);
+		}  
+		else {
 			printHelp ();
 		}
 	}
@@ -227,7 +230,7 @@ void initScene () {
 	std::uniform_real_distribution<float> y_dist(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]);
 	std::uniform_real_distribution<float> z_dist(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2]);
 	
-	for (int i = 0; i < 10; i++) {
+	for (int i = 0; i < 50; i++) {
 		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 20.f));
 	}
 

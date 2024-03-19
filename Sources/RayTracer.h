@@ -33,7 +33,7 @@ public:
 	inline void setResolution (int width, int height) { m_imagePtr = make_shared<Image> (width, height); }
 	inline std::shared_ptr<Image> image () { return m_imagePtr; }
 	void init (const std::shared_ptr<Scene> scenePtr);
-	void render (const std::shared_ptr<Scene> scenePtr);
+	void render (const std::shared_ptr<Scene> scenePtr, bool lightcuts);
 
 private:
 	std::shared_ptr<Image> m_imagePtr;

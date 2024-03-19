@@ -8,8 +8,8 @@ struct LightTree {
 
     LightTree() {}
 
-    void build(std::vector<PointLight> lights) {
-        this->lights = lights;
+    void build(std::vector<PointLight> lights_) {
+        this->lights = lights_;
         indices.resize(lights.size());
         std::iota(indices.begin(), indices.end(), 0);
         tree.resize(0);
@@ -62,13 +62,13 @@ struct LightTree {
             lights.push_back(newLight);
             active_clusters.push_back(tree.size());
             tree.push_back(united);
-            active_clusters.erase(active_clusters.begin() + cur_i);
             active_clusters.erase(active_clusters.begin() + cur_j);
+            active_clusters.erase(active_clusters.begin() + cur_i);
         }
     }
 
-    glm::vec3 getLight(PointLight light, glm::vec3 position, glm::vec3 direction, glm::vec3 normal, glm::vec3 albedo, glm::mat4 viewMat) {
-        auto dir = position - glm::vec3(viewMat * glm::vec4(light.getTranslation(), 1.0));
+    glm::vec3 getLight(PointLight light, glm::vec3 position, glm::vec3 direction, glm::vec3 normal, glm::vec3 albedo) {
+        auto dir = position - light.getTranslation();
 		auto dirNorm = glm::length(dir);
         return GetLight(dir / dirNorm, light.color, normal, glm::normalize(-position), albedo, 0.1) * light.intensity / dirNorm / dirNorm;
     }
@@ -86,10 +86,10 @@ struct LightTree {
                 res.push_back(lights[node.block_start]);
                 continue;
             }
-            glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo, viewMat);
-            glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo, viewMat) + 
-                                        getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo, viewMat);
-            if (glm::length(cur_estimate - child_estimates) < 0.001) {
+            glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo);
+            glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo) + 
+                                        getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo);
+            if (glm::length(cur_estimate - child_estimates) < 0.01) {
                 res.push_back(lights[node.block_start]);
             } else {
                 q.push(node.left_idx);
