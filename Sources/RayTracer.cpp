@@ -118,17 +118,9 @@ void initBVH(const std::shared_ptr<Scene> scenePtr) {
 	auto camera = scenePtr->camera();
 	for (int i = 0; i < scenePtr->numOfMeshes(); i++) {
 		auto mesh = scenePtr->mesh(i)->mesh;
-		// auto mvMat = camera->computeViewMatrix() * mesh->computeTransformMatrix();
-		// auto nMat = glm::transpose (glm::inverse (mvMat));
 		framePos = mesh->vertexPositions();
 		frameNormals = mesh->vertexNormals();
-		// for (glm::vec3& p : framePos) {
-		// 	p = glm::vec3(mvMat * glm::vec4(p, 1.0)); 
-		// }
-		// for (glm::vec3& n : frameNormals) {
-		// 	n = glm::vec3(nMat * glm::vec4(n, 1.0)); 
-		// 	n /= glm::length(n);
-		// }
+
 		auto triangles = mesh->triangleIndices();
 		std::vector<std::vector<glm::vec3>> triPos;
 		for (int i = 0; i < triangles.size(); i++) {
@@ -151,7 +143,6 @@ RayHit raySceneIntersectionBVH(Ray ray, const std::shared_ptr<Scene> scenePtr) {
 		
 		
 		bvh[i].checkHit(0, ray, [&](int idx){
-			// std::cout << "checkHit" << ' ' << idx << std::endl;
 			glm::vec3 p0 = framePos[triangles[idx][0]];
 			glm::vec3 p1 = framePos[triangles[idx][1]];
 			glm::vec3 p2 = framePos[triangles[idx][2]];
@@ -192,7 +183,7 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 	for (int i = 0; i < scenePtr->numOfPLights(); i++) {
 		auto light = scenePtr->pLight(i);
 		glm::vec3 pos = ray.origin + ray.direction * hit.t;
-		auto dir = pos - glm::vec3(/*scenePtr->camera()->computeViewMatrix() * */ glm::vec4(light->getTranslation(), 1.0));
+		auto dir = pos - light->getTranslation();
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
@@ -207,7 +198,7 @@ glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayH
 	glm::vec3 res{0};
 	auto lights = lightCutTree.getLights(pos, ray.direction, hit.normal, hit.material->albedo, scenePtr->camera()->computeViewMatrix());
 	for (PointLight light : lights) {
-		auto dir = pos - glm::vec3(/*scenePtr->camera()->computeViewMatrix() * */ glm::vec4(light.getTranslation(), 1.0));
+		auto dir = pos - light.getTranslation();
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
