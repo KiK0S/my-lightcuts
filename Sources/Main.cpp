@@ -231,7 +231,7 @@ void initScene () {
 	std::uniform_real_distribution<float> z_dist(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2]);
 	
 	for (int i = 0; i < 50; i++) {
-		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 20.f));
+		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 10.f));
 	}
 
 	// Camera

@@ -193,10 +193,10 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 	return res;
 }
 
-glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayHit hit) {
+glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayHit hit, bool print = false) {
 	glm::vec3 pos = ray.origin + ray.direction * hit.t;
 	glm::vec3 res{0};
-	auto lights = lightCutTree.getLights(pos, ray.direction, hit.normal, hit.material->albedo, scenePtr->camera()->computeViewMatrix());
+	auto lights = lightCutTree.getLights(pos, ray.direction, hit.normal, hit.material->albedo, scenePtr->camera()->computeViewMatrix(), print);
 	for (PointLight light : lights) {
 		auto dir = pos - light.getTranslation();
 		auto dirNorm = glm::length(dir);
@@ -237,6 +237,10 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr, bool lightcuts) {
 						(*m_imagePtr)(w, h) += GetLight(light->direction, light->color, hit.normal, glm::normalize(-pos), hit.material->albedo, 0.1) * light->intensity;
 					}
 				}
+				// if (glm::length(GetPointLightCuts(scenePtr, ray, hit) - GetPointLightNative(scenePtr, ray, hit)) > 0.2) {
+				// 	GetPointLightCuts(scenePtr, ray, hit, true);
+				// 	throw std::runtime_error("bad lightcuts");
+				// }
 				if (lightcuts)
 					(*m_imagePtr)(w, h) += GetPointLightCuts(scenePtr, ray, hit);
 				else

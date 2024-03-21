@@ -2,6 +2,7 @@
 #include "BVH.hpp"
 #include "LightSource.hpp"
 #include <vector>
+#include <set>
 #include <queue>
 
 struct LightTree {
@@ -54,12 +55,12 @@ struct LightTree {
             united.right_idx = active_clusters[cur_j];
             united.box = node(cur_i).box;
             united.box.update(node(cur_j).box);
-            PointLight newLight(0.5f * (lights[active_clusters[cur_i]].getTranslation() + lights[active_clusters[cur_j]].getTranslation()),
-                                0.5f * (lights[active_clusters[cur_i]].color + lights[active_clusters[cur_j]].color),
-                                lights[active_clusters[cur_i]].intensity + lights[active_clusters[cur_j]].intensity);
+            // PointLight newLight(0.5f * (lights[active_clusters[cur_i]].getTranslation() + lights[active_clusters[cur_j]].getTranslation()),
+            //                     0.5f * (lights[active_clusters[cur_i]].color + lights[active_clusters[cur_j]].color),
+            //                     lights[active_clusters[cur_i]].intensity + lights[active_clusters[cur_j]].intensity);
             united.block_size = 1;
-            united.block_start = lights.size();
-            lights.push_back(newLight);
+            united.block_start = rand() % 2 == 0 ? node(cur_i).block_start : node(cur_j).block_start;
+            // lights.push_back(newLight);
             active_clusters.push_back(tree.size());
             tree.push_back(united);
             active_clusters.erase(active_clusters.begin() + cur_j);
@@ -73,7 +74,62 @@ struct LightTree {
         return GetLight(dir / dirNorm, light.color, normal, glm::normalize(-position), albedo, 0.1) * light.intensity / dirNorm / dirNorm;
     }
 
-    std::vector<PointLight> getLights(glm::vec3 position, glm::vec3 direction,  glm::vec3 normal, glm::vec3 albedo, glm::mat4 viewMat) {
+    std::vector<PointLight> getLights(glm::vec3 position, glm::vec3 direction,  glm::vec3 normal, glm::vec3 albedo, glm::mat4 viewMat, bool print = false) {
+        int root = tree.size() - 1;
+        auto estimate_error = [&](Node node) { 
+            glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo);
+            glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo) + 
+                                    getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo);
+            return glm::length(cur_estimate - child_estimates);
+        };
+        auto cmp = [&](int i, int j) {
+            Node a = tree[i];
+            Node b = tree[j];
+            
+            if (a.left_idx == -1) {
+                if (b.left_idx == -1) {
+                    return i < j;
+                }
+                return false;
+            }
+            if (b.left_idx == -1) {
+                return true;
+            }
+            return estimate_error(a) > estimate_error(b);
+        };
+        std::set<int, decltype(cmp)> s(cmp);
+        s.insert(root);
+        while(s.size() < 1000) {
+            
+            int node = *s.begin();
+            if (print) {
+                std::cout << node << '\n';
+            }
+            if (tree[node].left_idx == -1) {
+                // std::cout << "found leaf\n";
+                break;
+            }
+            if (estimate_error(tree[node]) < 0.01) {
+                break;
+            }
+            s.erase(node);
+            s.insert(tree[node].left_idx);
+            s.insert(tree[node].right_idx);
+        }
+        if (print)
+            std::cout << "===\n";
+        std::vector<PointLight> res;
+        for (int idx : s) {
+            if (print)
+                std::cout << tree[idx].block_start << ' ';
+            res.push_back(lights[tree[idx].block_start]);
+        }
+        if (print)
+            std::cout << '\n';
+        return res;
+    }
+
+    std::vector<PointLight> getLightsOld(glm::vec3 position, glm::vec3 direction,  glm::vec3 normal, glm::vec3 albedo, glm::mat4 viewMat) {
         int root = tree.size() - 1;
         std::queue<int> q;
         std::vector<PointLight> res;
@@ -89,7 +145,7 @@ struct LightTree {
             glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo);
             glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo) + 
                                         getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo);
-            if (glm::length(cur_estimate - child_estimates) < 0.01) {
+            if (glm::length(cur_estimate - child_estimates) < 0.00) {
                 res.push_back(lights[node.block_start]);
             } else {
                 q.push(node.left_idx);
