@@ -48,7 +48,6 @@ using namespace std;
 static GLFWwindow * windowPtr = nullptr;
 static std::shared_ptr<Scene> scenePtr;
 static std::shared_ptr<Rasterizer> rasterizerPtr;
-static std::shared_ptr<RayTracer> rayTracerPtr;
 
 // Camera control variables
 static glm::vec3 center = glm::vec3 (0.0); // To update based on the mesh position
@@ -65,7 +64,8 @@ static std::string basePath;
 static std::string meshFilename;
 
 // Raytraced rendering
-static bool isDisplayRaytracing (false);
+static int displayMode(0);
+std::vector<std::shared_ptr<RayTracer>> rayTracers;
 
 void clear ();
 
@@ -86,11 +86,12 @@ void printHelp () {
 }
 
 /// Adjust the ray tracer target resolution and runs it.
-void raytrace (bool lightcuts = false) {
+void raytrace () {
 	int width, height;
 	glfwGetWindowSize(windowPtr, &width, &height);
+	auto rayTracerPtr = rayTracers[std::max(0, displayMode - 1)];
 	rayTracerPtr->setResolution (width, height);
-	rayTracerPtr->render (scenePtr, lightcuts);
+	rayTracerPtr->render (scenePtr);
 }
 
 /// Executed each time a key is entered.
@@ -107,12 +108,11 @@ void keyCallback (GLFWwindow * windowPtr, int key, int scancode, int action, int
 		} else if (action == GLFW_PRESS && key == GLFW_KEY_G) {
 			scenePtr->camera()->setFoV (std::min (120.f, scenePtr->camera()->getFoV () + 5.f));
 		} else if (action == GLFW_PRESS && key == GLFW_KEY_TAB) {
-			isDisplayRaytracing = !isDisplayRaytracing;
+			displayMode++;
+			displayMode %= (rayTracers.size() + 1);
 		} else if (action == GLFW_PRESS && key == GLFW_KEY_SPACE) {
 			raytrace ();
-		} else if (action == GLFW_PRESS && key == GLFW_KEY_R) {
-			raytrace (true);
-		}  
+		}
 		else {
 			printHelp ();
 		}
@@ -169,7 +169,9 @@ void mouseButtonCallback (GLFWwindow * window, int button, int action, int mods)
 void windowSizeCallback (GLFWwindow * windowPtr, int width, int height) {
 	scenePtr->camera()->setAspectRatio (static_cast<float>(width) / static_cast<float>(height));
 	rasterizerPtr->setResolution (width, height);
-	rayTracerPtr->setResolution (width, height);
+	for (auto rayTracerPtr : rayTracers) {
+		rayTracerPtr->setResolution (width, height);
+	}
 }
 
 void initGLFW () {
@@ -231,7 +233,7 @@ void initScene () {
 	std::uniform_real_distribution<float> z_dist(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2]);
 	
 	for (int i = 0; i < 50; i++) {
-		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 10.f));
+		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 1.f * meshScale));
 	}
 
 	// Camera
@@ -252,8 +254,13 @@ void init () {
 	initScene (); // Actual scene to render
 	rasterizerPtr = make_shared<Rasterizer> ();
 	rasterizerPtr->init (basePath, scenePtr); // Mut be called before creating the scene, to generate an OpenGL context and allow mesh VBOs
-	rayTracerPtr = make_shared<RayTracer> ();
-	rayTracerPtr->init (scenePtr);
+	rayTracers.push_back(make_shared<RayTracer>(false, true));
+	rayTracers.push_back(make_shared<RayTracer>(true, true));
+	rayTracers.push_back(make_shared<RayTracer>(false, false));
+	rayTracers.push_back(make_shared<RayTracer>(true, false));
+	for (auto rayTracerPtr : rayTracers) {
+		rayTracerPtr->init(scenePtr);
+	}
 }
 
 void clear () {
@@ -262,10 +269,12 @@ void clear () {
 }
 
 
+
+
 // The main rendering call
 void render () {
-	if (isDisplayRaytracing)
-		rasterizerPtr->display (rayTracerPtr->image ());
+	if (displayMode != 0)
+		rasterizerPtr->display (rayTracers[displayMode - 1]->image ());
 	else
 		rasterizerPtr->render (scenePtr);
 }

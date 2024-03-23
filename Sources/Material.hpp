@@ -10,6 +10,7 @@ public:
 
     glm::vec4 albedo;
     float shininess;
+    float roughness = 0.1;
     float kd;
     float ka;
     float ks;

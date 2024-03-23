@@ -10,107 +10,23 @@
 
 #include "Console.h"
 #include "Camera.h"
+#include "BRDF.hpp"
+#include "LightCut.hpp"
 #include "BVH.hpp"
 #include <random>
 #include <sstream>
 
-RayTracer::RayTracer() : 
-	m_imagePtr (std::make_shared<Image>()) {}
+RayTracer::RayTracer(bool useLightCuts, bool renderPreview) : 
+	m_imagePtr (std::make_shared<Image>()), useLightCuts(useLightCuts), renderPreview(renderPreview) {}
 
 RayTracer::~RayTracer() {}
 
 void RayTracer::init (const std::shared_ptr<Scene> scenePtr) {
 }
 
-bool rayTriangleIntersect(const Ray& ray, const glm::vec3& p0, const glm::vec3& p1, const glm::vec3& p2, float& t) {
-    const float EPSILON = 0.000001;
-    glm::vec3 edge1, edge2, h, s, q;
-    float a, f, u, v;
-
-    edge1 = p1 - p0;
-    edge2 = p2 - p0;
-    h = glm::cross(ray.direction, edge2);
-    a = glm::dot(edge1, h);
-
-    if (a > -EPSILON && a < EPSILON)
-        return false;
-
-    f = 1.0f / a;
-    s = ray.origin - p0;
-    u = f * glm::dot(s, h);
-
-    if (u < 0.0f || u > 1.0f)
-        return false;
-
-    q = glm::cross(s, edge1);
-    v = f * glm::dot(ray.direction, q);
-
-    if (v < 0.0f || u + v > 1.0f)
-        return false;
-
-    t = f * glm::dot(edge2, q);
-    if (t > EPSILON) {
-		return true;
-	}
-
-    return false;
-}
-
-glm::vec3 computeBarycentricCoordinates(const glm::vec3& point, const glm::vec3& A, const glm::vec3& B, const glm::vec3& C) {
-    glm::vec3 v0 = B - A;
-    glm::vec3 v1 = C - A;
-    glm::vec3 v2 = point - A;
-
-    float dot00 = glm::dot(v0, v0);
-    float dot01 = glm::dot(v0, v1);
-    float dot02 = glm::dot(v0, v2);
-    float dot11 = glm::dot(v1, v1);
-    float dot12 = glm::dot(v1, v2);
-
-    float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
-    float v = (dot11 * dot02 - dot01 * dot12) * invDenom;
-    float w = (dot00 * dot12 - dot01 * dot02) * invDenom;
-    float u = 1.0f - v - w;
-
-    return glm::vec3(u, v, w);
-}
-
 std::vector<BVH<std::vector<glm::vec3>>> bvh; 
 std::vector<glm::vec3> framePos;
 std::vector<glm::vec3> frameNormals;
-
-
-RayHit raySceneIntersection(Ray ray, const std::shared_ptr<Scene> scenePtr) {
-	RayHit hit;
-	ray.normalize();
-	auto camera = scenePtr->camera();
-	for (int i = 0; i < scenePtr->numOfMeshes(); i++) {
-		auto mesh = scenePtr->mesh(i)->mesh;
-		auto triangles = mesh->triangleIndices();
-		for (int j = 0; j < triangles.size(); j++) {
-			glm::vec3 p0 = framePos[triangles[j][0]];
-			glm::vec3 p1 = framePos[triangles[j][1]];
-			glm::vec3 p2 = framePos[triangles[j][2]];
-			
-			glm::vec3 n0 = frameNormals[triangles[j][0]];
-			glm::vec3 n1 = frameNormals[triangles[j][1]];
-			glm::vec3 n2 = frameNormals[triangles[j][2]];
-			float t;
-			if (rayTriangleIntersect(ray, p0, p1, p2, t) ) {
-				RayHit new_hit;
-				new_hit.material = scenePtr->mesh(i)->material;
-				glm::vec3 pos = ray.origin + ray.direction * t;
-				glm::vec3 uvw = computeBarycentricCoordinates(pos, p0, p1, p2);
-				new_hit.normal = n0 * uvw[0] + n1 * uvw[1] + n2 * uvw[2];
-				new_hit.normal /= glm::length(new_hit.normal);
-				new_hit.ray = ray;
-				new_hit.t = t;
-				hit.update(new_hit);
-			}
-		}
-	}
-	return hit;
-}
 
 
 void initBVH(const std::shared_ptr<Scene> scenePtr) {
@@ -153,7 +69,7 @@ RayHit raySceneIntersectionBVH(Ray ray, const std::shared_ptr<Scene> scenePtr) {
 			float t;
 			if (rayTriangleIntersect(ray, p0, p1, p2, t) ) {
 				RayHit new_hit;
-				new_hit.material = scenePtr->mesh(i)->material;
+				new_hit.brdf = BRDF(scenePtr->mesh(i)->material);
 				glm::vec3 pos = ray.origin + ray.direction * t;
 				glm::vec3 uvw = computeBarycentricCoordinates(pos, p0, p1, p2);
 				new_hit.normal = n0 * uvw[0] + n1 * uvw[1] + n2 * uvw[2];
@@ -170,9 +86,9 @@ RayHit raySceneIntersectionBVH(Ray ray, const std::shared_ptr<Scene> scenePtr) {
 LightTree lightCutTree;
 
 void initLightCuts(const std::shared_ptr<Scene> scenePtr) {
-	std::vector<PointLight> pls;
+	std::vector<std::shared_ptr<PointLight>> pls;
 	for (int i = 0; i < scenePtr->numOfPLights(); i++) {
-		pls.push_back(*scenePtr->pLight(i));
+		pls.push_back(scenePtr->pLight(i));
 	}
 	lightCutTree.build(pls);
 }
@@ -187,7 +103,7 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
-			res += GetLight(dir / dirNorm, light->color, hit.normal, glm::normalize(-pos), hit.material->albedo, 0.1) * light->intensity / dirNorm / dirNorm;
+			res += hit.brdf(BRDFArgs{hit.normal, glm::normalize(-ray.direction), dir / dirNorm}) * light->color * light->intensity / dirNorm / dirNorm;
 		}
 	}
 	return res;
@@ -196,21 +112,26 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayHit hit, bool print = false) {
 	glm::vec3 pos = ray.origin + ray.direction * hit.t;
 	glm::vec3 res{0};
-	auto lights = lightCutTree.getLights(pos, ray.direction, hit.normal, hit.material->albedo, scenePtr->camera()->computeViewMatrix(), print);
-	for (PointLight light : lights) {
-		auto dir = pos - light.getTranslation();
+	auto brdfArgs = BRDFArgs{hit.normal, glm::normalize(-ray.direction), glm::vec3{0.0f}};
+	auto lights = lightCutTree.getLights(pos, hit.brdf, brdfArgs, print);
+	for (auto light : lights) {
+		auto dir = pos - light->getTranslation();
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
-			res += GetLight(dir / dirNorm, light.color, hit.normal, glm::normalize(-pos), hit.material->albedo, 0.1) * light.intensity / dirNorm / dirNorm;
+			res += hit.brdf(BRDFArgs{hit.normal, glm::normalize(-ray.direction), dir / dirNorm}) * light->color * light->intensity / dirNorm / dirNorm;
 		}
 	}
 	return res;
 }
 
-void RayTracer::render (const std::shared_ptr<Scene> scenePtr, bool lightcuts) {
+void RayTracer::render (const std::shared_ptr<Scene> scenePtr) {
 	size_t width = m_imagePtr->width();
 	size_t height = m_imagePtr->height();
+	if (renderPreview) {
+		width /= 4;
+		height /= 4;
+	}
 	std::chrono::high_resolution_clock clock;
 	Console::print ("Start ray tracing at " + std::to_string (width) + "x" + std::to_string (height) + " resolution...");
 	std::chrono::time_point<std::chrono::high_resolution_clock> before = clock.now();
@@ -221,7 +142,8 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr, bool lightcuts) {
     std::uniform_int_distribution<int> w_dist(0, width);
     std::uniform_int_distribution<int> h_dist(0, height);
 	initBVH(scenePtr);
-	initLightCuts(scenePtr);
+	if (useLightCuts)
+		initLightCuts(scenePtr);
 	for (int w = 0; w < width - 1; w++) {
 		for (int h = 0; h < height - 1; h++) {
 			auto camera = scenePtr->camera();
@@ -234,14 +156,10 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr, bool lightcuts) {
 					glm::vec3 pos = ray.origin + ray.direction * hit.t;
 					RayHit light_hit = raySceneIntersectionBVH(Ray{pos + light->direction * 0.1f, light->direction}, scenePtr);
 					if (light_hit.t == -1) {
-						(*m_imagePtr)(w, h) += GetLight(light->direction, light->color, hit.normal, glm::normalize(-pos), hit.material->albedo, 0.1) * light->intensity;
+						(*m_imagePtr)(w, h) += hit.brdf(BRDFArgs{hit.normal, glm::normalize(-ray.direction), light->direction}) * light->color * light->intensity;
 					}
 				}
-				// if (glm::length(GetPointLightCuts(scenePtr, ray, hit) - GetPointLightNative(scenePtr, ray, hit)) > 0.2) {
-				// 	GetPointLightCuts(scenePtr, ray, hit, true);
-				// 	throw std::runtime_error("bad lightcuts");
-				// }
-				if (lightcuts)
+				if (useLightCuts)
 					(*m_imagePtr)(w, h) += GetPointLightCuts(scenePtr, ray, hit);
 				else
 					(*m_imagePtr)(w, h) += GetPointLightNative(scenePtr, ray, hit);

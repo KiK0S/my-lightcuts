@@ -27,13 +27,16 @@ using namespace std;
 class RayTracer {
 public:
 	
-	RayTracer();
+	RayTracer(bool useLightCuts = false, bool renderPreview = false);
 	virtual ~RayTracer();
 
 	inline void setResolution (int width, int height) { m_imagePtr = make_shared<Image> (width, height); }
 	inline std::shared_ptr<Image> image () { return m_imagePtr; }
 	void init (const std::shared_ptr<Scene> scenePtr);
-	void render (const std::shared_ptr<Scene> scenePtr, bool lightcuts);
+	void render (const std::shared_ptr<Scene> scenePtr);
+
+	bool useLightCuts;
+	bool renderPreview;
 
 private:
 	std::shared_ptr<Image> m_imagePtr;
