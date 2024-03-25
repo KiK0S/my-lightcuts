@@ -43,9 +43,7 @@ void initBVH(const std::shared_ptr<Scene> scenePtr) {
 			triPos.push_back({framePos[triangles[i][0]], framePos[triangles[i][1]], framePos[triangles[i][2]]});
 		}
 		bvh.emplace_back(triPos);
-		std::cout << "before build" << std::endl;
 		bvh.back().build();
-		std::cout << "after build" << std::endl;
 	}
 }
 
@@ -99,7 +97,7 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 	for (int i = 0; i < scenePtr->numOfPLights(); i++) {
 		auto light = scenePtr->pLight(i);
 		glm::vec3 pos = ray.origin + ray.direction * hit.t;
-		auto dir = pos - light->getTranslation();
+		auto dir = light->getTranslation() - pos;
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
@@ -115,7 +113,7 @@ glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayH
 	auto brdfArgs = BRDFArgs{hit.normal, glm::normalize(-ray.direction), glm::vec3{0.0f}};
 	auto lights = lightCutTree.getLights(pos, hit.brdf, brdfArgs, print);
 	for (auto light : lights) {
-		auto dir = pos - light->getTranslation();
+		auto dir = light->getTranslation() - pos;
 		auto dirNorm = glm::length(dir);
 		RayHit light_hit = raySceneIntersectionBVH(Ray{pos + dir * 0.001f, +dir}, scenePtr);
 		if (light_hit.t == -1 || light_hit.t >= dirNorm - 0.001f) {
@@ -141,9 +139,13 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr) {
     std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
     std::uniform_int_distribution<int> w_dist(0, width);
     std::uniform_int_distribution<int> h_dist(0, height);
+	std::cout << "before init" << std::endl;
+	glm::mat4 viewMatrix = scenePtr->camera()->computeViewMatrix ();
+	glm::mat3 invModelViewMatrix = glm::inverse (viewMatrix);
 	initBVH(scenePtr);
 	if (useLightCuts)
 		initLightCuts(scenePtr);
+	std::cout << "after init" << std::endl;
 	for (int w = 0; w < width - 1; w++) {
 		for (int h = 0; h < height - 1; h++) {
 			auto camera = scenePtr->camera();
@@ -154,9 +156,10 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr) {
 				for (int i = 0; i < scenePtr->numOfLights(); i++) {
 					auto light = scenePtr->light(i);
 					glm::vec3 pos = ray.origin + ray.direction * hit.t;
-					RayHit light_hit = raySceneIntersectionBVH(Ray{pos + light->direction * 0.1f, light->direction}, scenePtr);
+					auto dir = invModelViewMatrix * light->direction;
+					RayHit light_hit = raySceneIntersectionBVH(Ray{pos - dir * 0.01f, -dir}, scenePtr);
 					if (light_hit.t == -1) {
-						(*m_imagePtr)(w, h) += hit.brdf(BRDFArgs{hit.normal, glm::normalize(-ray.direction), light->direction}) * light->color * light->intensity;
+						(*m_imagePtr)(w, h) += hit.brdf(BRDFArgs{hit.normal, glm::normalize(-ray.direction), -glm::normalize(dir)}) * light->color * light->intensity;
 					}
 				}
 				if (useLightCuts)

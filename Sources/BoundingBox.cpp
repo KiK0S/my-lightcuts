@@ -22,6 +22,30 @@ glm::vec3 BoundingBox3d::p1() const {
 glm::vec3 BoundingBox3d::p2() const {
     return glm::vec3(x_max, y_max, z_max);
 }
+BoundingBox3d BoundingBox3d::afterRotation(glm::mat3 r) const {
+    float opt[3];
+    BoundingBox3d res{
+        100000,
+        -100000,
+        100000,
+        -100000,
+        100000,
+        -100000
+    };
+    for (int mask = 0; mask < 8; mask++) {
+        glm::vec3 point(0.0f);
+        for (int i = 0; i < 3; i++) {
+            if (mask & (1 << i)) {
+                point[i] = min_axis(i);
+            } else {
+                point[i] = max_axis(i);
+            }
+            res.update(r * point);
+        }
+    }
+    return res;
+}
+
 int BoundingBox3d::longest_axis() const {
     float dx = x_max - x_min;
     float dy = y_max - y_min;

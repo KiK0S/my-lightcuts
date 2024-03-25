@@ -40,6 +40,7 @@ namespace fs = std::filesystem;
 #include "RayTracer.h"
 #include "Model.hpp"
 #include "Material.hpp"
+#include "Random.hpp"
 #include "LightSource.hpp"
 
 using namespace std;
@@ -110,6 +111,11 @@ void keyCallback (GLFWwindow * windowPtr, int key, int scancode, int action, int
 		} else if (action == GLFW_PRESS && key == GLFW_KEY_TAB) {
 			displayMode++;
 			displayMode %= (rayTracers.size() + 1);
+		} else if (action == GLFW_PRESS && key == GLFW_KEY_Q) {
+			displayMode--;
+			if (displayMode == -1) {
+				displayMode = rayTracers.size();
+			}
 		} else if (action == GLFW_PRESS && key == GLFW_KEY_SPACE) {
 			raytrace ();
 		}
@@ -208,7 +214,7 @@ void initGLFW () {
 
 void initScene () {
 	scenePtr = std::make_shared<Scene> ();
-	scenePtr->setBackgroundColor (glm::vec3 (0.1f, 0.5f, 0.95f));
+	scenePtr->setBackgroundColor (glm::vec3 (0.0f, 0.0f, 0.0f));
 
 	// Mesh
 	auto meshPtr = std::make_shared<Mesh> ();
@@ -223,18 +229,48 @@ void initScene () {
 	meshPtr->computeBoundingSphere (center, meshScale);
 	auto modelPtr = std::make_shared<Model>(meshPtr, std::make_shared<Material>(glm::vec4(0.6, 0.9, 0.4, 1.0), 16, 0.2, 0.4, 0.4));
 	scenePtr->add (modelPtr); 
-	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 0.3, 1.0), glm::vec3(1.0, 1.0, 1.0), 0.7f));
-	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 1.0, 0.1), glm::vec3(1.0, 0.0, 0.0), 0.2f));
-	std::random_device rd;  // Will be used to obtain a seed for the random number engine
-	std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
-	std::uniform_real_distribution<float> r_dist(0, 1);
-	std::uniform_real_distribution<float> x_dist(-meshScale / 2.0 + center[0], meshScale / 2.0 + center[0]);
-	std::uniform_real_distribution<float> y_dist(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]);
-	std::uniform_real_distribution<float> z_dist(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2]);
-	
-	for (int i = 0; i < 50; i++) {
-		scenePtr->add (std::make_shared<PointLight>(glm::vec3(x_dist(gen), y_dist(gen), z_dist(gen)), glm::vec3(r_dist(gen), r_dist(gen), r_dist(gen)), 1.f * meshScale));
+	scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 0.3, -1.0), glm::vec3(1.0, 1.0, 1.0), 1.0f));
+	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(-1.0, 1.0, 0.1), glm::vec3(1.0, 1.0, 1.0), 1.0f));
+	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(1.0, 0.0, 0.1), glm::vec3(1.0, 1.0, 1.0), 1.0f));
+	// std::random_device rd;  // Will be used to obtain a seed for the random number engine
+	// std::mt19937 gen(rd()); // Standard mersenne_twister_engine seeded with rd()
+	// std::uniform_real_distribution<float> r_dist(0, 1);
+	// std::uniform_real_distribution<float> x_dist(-meshScale / 2.0 + center[0], meshScale / 2.0 + center[0]);
+	// std::uniform_real_distribution<float> y_dist(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]);
+	// std::uniform_real_distribution<float> z_dist(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2]);
+	int cnt = 0;
+	// for (auto pos : meshPtr->vertexPositions()) {
+	// 	scenePtr->add (std::make_shared<PointLight>(pos, glm::vec3(1.0), 1.f * meshScale));
+	// 	cnt++;
+	// 	if (cnt == 1000) {
+	// 		break;
+	// 	}
+	// }	
+
+	glm::vec3 p0 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 4];
+	glm::vec3 p1 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 2];
+	glm::vec3 p2 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 3];
+	glm::vec3 dz = -glm::cross(p2 - p0, p1 - p0);
+	dz = glm::normalize(dz) * 0.01f;
+
+	int total_x = 50;
+	int total_y = 25;
+	for (int i = 0; i < total_x; i++) {
+		for (int j = 0; j < total_y; j++) {
+			auto dx = (p1 - p0) / float(total_x) * (0.5f + i);
+			auto dy = (p2 - p0) / float(total_y) * (0.5f + j);
+			// if (std::abs(i - j) > 5) {
+				scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0), 0.001f * meshScale));			
+			// } else {
+				// scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0, 0.0, 0.0), 0.01f * meshScale));			
+			// }
+		}
 	}
+
+
+	// for (int i = 0; i < 1; i++) {
+	// 	scenePtr->add (std::make_shared<PointLight>(glm::vec3(rand_between(-meshScale / 2.0 + center[0], meshScale / 2.0 + center[0]), rand_between(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]), rand_between(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2])), glm::vec3(rand_between(0, 1), rand_between(0, 1), rand_between(0, 1)), 0.1f * meshScale));
+	// }
 
 	// Camera
 	int width, height;

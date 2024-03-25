@@ -22,6 +22,7 @@ struct BoundingBox3d {
     float max_axis(int idx) const;
     glm::vec3 p1() const;
     glm::vec3 p2() const;
+    BoundingBox3d afterRotation(glm::mat3 rotation) const;
     int longest_axis() const;
     std::pair<BoundingBox3d, BoundingBox3d> partition() const;
     bool hasIntersection( const Ray& ray) const;

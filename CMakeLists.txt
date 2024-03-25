@@ -18,6 +18,8 @@ add_executable (
 	Sources/LightCut.cpp
 	Sources/BoundingBox.cpp
 	Sources/BRDF.cpp
+	Sources/Random.cpp
+	Sources/Ray.cpp
 	Sources/RayTracer.cpp
 	Sources/Rasterizer.cpp
 	Sources/ShaderProgram.cpp
