@@ -264,8 +264,8 @@ void initScene () {
 		glm::vec3 dz = -glm::cross(p2 - p0, p1 - p0);
 		dz = glm::normalize(dz) * 0.01f;
 
-		int total_x = 10;
-		int total_y = 5;
+		int total_x = 24;
+		int total_y = 9;
 		for (int i = 0; i < total_x; i++) {
 			for (int j = 0; j < total_y; j++) {
 				auto dx = (p1 - p0) / float(total_x) * (0.5f + i);
@@ -286,13 +286,13 @@ void initScene () {
 		glm::vec3 dz = -glm::cross(p2 - p0, p1 - p0);
 		dz = glm::normalize(dz) * 0.01f;
 
-		int total_x = 10;
-		int total_y = 5;
+		int total_x = 24;
+		int total_y = 9;
 		for (int i = 0; i < total_x; i++) {
 			for (int j = 0; j < total_y; j++) {
 				auto dx = (p1 - p0) / float(total_x) * (0.5f + i);
 				auto dy = (p2 - p0) / float(total_y) * (0.5f + j);
-				if (std::abs(i - j) > 3) {
+				if (std::abs(i - j) > 5) {
 					scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0), 0.05f * meshScale));			
 				} else {
 					scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0, 0.0, 0.0), 0.05f * meshScale));			
@@ -324,10 +324,11 @@ void init () {
 		exitOnCriticalError ("[Failed to initialize OpenGL context]");
 	initScene (); // Actual scene to render
 	rasterizerPtr = make_shared<Rasterizer> ();
-	rasterizerPtr->init (basePath, scenePtr); // Mut be called before creating the scene, to generate an OpenGL context and allow mesh VBOs
-	rayTracers.push_back(make_shared<RayTracer>(false, true));
-	rayTracers.push_back(make_shared<RayTracer>(true, true));
-	rayTracers.push_back(make_shared<RayTracer>(true, true, true));
+	rasterizerPtr->init (basePath, scenePtr); // Must be called before creating the scene, to generate an OpenGL context and allow mesh VBOs
+	// rayTracers.push_back(make_shared<RayTracer>(false, true));
+	// rayTracers.push_back(make_shared<RayTracer>(true, true));
+	// rayTracers.push_back(make_shared<RayTracer>(true, true, true, true));
+	// rayTracers.push_back(make_shared<RayTracer>(true, true, true));
 	rayTracers.push_back(make_shared<RayTracer>(false, false));
 	rayTracers.push_back(make_shared<RayTracer>(true, false));
 	rayTracers.push_back(make_shared<RayTracer>(true, false, false, true));
