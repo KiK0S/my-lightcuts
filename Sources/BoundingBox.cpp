@@ -23,7 +23,6 @@ glm::vec3 BoundingBox3d::p2() const {
     return glm::vec3(x_max, y_max, z_max);
 }
 BoundingBox3d BoundingBox3d::afterRotation(glm::mat3 r) const {
-    float opt[3];
     BoundingBox3d res{
         100000,
         -100000,

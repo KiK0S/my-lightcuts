@@ -235,10 +235,10 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
             // got good approximation
             break;
         }
-        if (max_comp(err_est) < 0.01 && max_comp(illumination) < 0.01f) {
-            // point is black and no difference would be seen
-            break;
-        }
+        // if (max_comp(err_est) < 0.01 && max_comp(illumination) < 0.01f) {
+        //     // point is black and no difference would be seen
+        //     break;
+        // }
         s.push_back(tree[node].left_idx);
         std::push_heap(s.begin(), s.end(), cmp);
         s.push_back(tree[node].right_idx);
