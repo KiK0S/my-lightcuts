@@ -223,13 +223,22 @@ void initScene () {
 			MeshLoader::loadOBJ (meshFilename, meshPtr);
 		if (meshFilename[meshFilename.size() - 1] == 'f')
 			MeshLoader::loadOFF (meshFilename, meshPtr);
+		if (meshFilename == std::string("desk")) {
+			MeshLoader::loadOBJ("Resources/Models/desk.obj", meshPtr);
+		}
+		if (meshFilename == std::string("desk-red")) {
+			MeshLoader::loadOBJ ("Resources/Models/desk.obj", meshPtr);
+		}
+		if (meshFilename == std::string("bedroom")) {
+			MeshLoader::loadOBJ ("Resources/Models/bedroom.obj", meshPtr);
+		}
 	} catch (std::exception & e) {
 		exitOnCriticalError (std::string ("[Error loading mesh]") + e.what ());
 	}
 	meshPtr->computeBoundingSphere (center, meshScale);
 	auto modelPtr = std::make_shared<Model>(meshPtr, std::make_shared<Material>(glm::vec4(0.6, 0.9, 0.4, 1.0), 16, 0.2, 0.4, 0.4));
 	scenePtr->add (modelPtr); 
-	scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(0.0, 0.3, -1.0), glm::vec3(1.0, 1.0, 1.0), 1.0f));
+	scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(-0.2, 0.0, -1.0), glm::vec3(1.0, 1.0, 1.0), 1.0f));
 	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(-1.0, 1.0, 0.1), glm::vec3(1.0, 1.0, 1.0), 1.0f));
 	// scenePtr->add (std::make_shared<DirectionalLight>(glm::vec3(1.0, 0.0, 0.1), glm::vec3(1.0, 1.0, 1.0), 1.0f));
 	// std::random_device rd;  // Will be used to obtain a seed for the random number engine
@@ -247,30 +256,56 @@ void initScene () {
 	// 	}
 	// }	
 
-	glm::vec3 p0 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 4];
-	glm::vec3 p1 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 2];
-	glm::vec3 p2 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 3];
-	glm::vec3 dz = -glm::cross(p2 - p0, p1 - p0);
-	dz = glm::normalize(dz) * 0.01f;
+	if (meshFilename == std::string("desk")) {
 
-	int total_x = 50;
-	int total_y = 25;
-	for (int i = 0; i < total_x; i++) {
-		for (int j = 0; j < total_y; j++) {
-			auto dx = (p1 - p0) / float(total_x) * (0.5f + i);
-			auto dy = (p2 - p0) / float(total_y) * (0.5f + j);
-			// if (std::abs(i - j) > 5) {
-				scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0), 0.001f * meshScale));			
-			// } else {
-				// scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0, 0.0, 0.0), 0.01f * meshScale));			
-			// }
+		glm::vec3 p0 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 4];
+		glm::vec3 p1 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 2];
+		glm::vec3 p2 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 3];
+		glm::vec3 dz = -glm::cross(p2 - p0, p1 - p0);
+		dz = glm::normalize(dz) * 0.01f;
+
+		int total_x = 10;
+		int total_y = 5;
+		for (int i = 0; i < total_x; i++) {
+			for (int j = 0; j < total_y; j++) {
+				auto dx = (p1 - p0) / float(total_x) * (0.5f + i);
+				auto dy = (p2 - p0) / float(total_y) * (0.5f + j);
+				// if (std::abs(i - j) > 5) {
+					scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0), 0.05f * meshScale));			
+				// } else {
+					// scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0, 0.0, 0.0), 0.01f * meshScale));			
+				// }
+			}
+		}
+	}
+	if (meshFilename == std::string("desk-red")) {
+
+		glm::vec3 p0 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 4];
+		glm::vec3 p1 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 2];
+		glm::vec3 p2 = meshPtr->vertexPositions()[meshPtr->vertexPositions().size() - 3];
+		glm::vec3 dz = -glm::cross(p2 - p0, p1 - p0);
+		dz = glm::normalize(dz) * 0.01f;
+
+		int total_x = 10;
+		int total_y = 5;
+		for (int i = 0; i < total_x; i++) {
+			for (int j = 0; j < total_y; j++) {
+				auto dx = (p1 - p0) / float(total_x) * (0.5f + i);
+				auto dy = (p2 - p0) / float(total_y) * (0.5f + j);
+				if (std::abs(i - j) > 3) {
+					scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0), 0.05f * meshScale));			
+				} else {
+					scenePtr->add (std::make_shared<PointLight>(p0 + dx + dy + dz, glm::vec3(1.0, 0.0, 0.0), 0.05f * meshScale));			
+				}
+			}
 		}
 	}
 
-
-	// for (int i = 0; i < 1; i++) {
-	// 	scenePtr->add (std::make_shared<PointLight>(glm::vec3(rand_between(-meshScale / 2.0 + center[0], meshScale / 2.0 + center[0]), rand_between(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]), rand_between(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2])), glm::vec3(rand_between(0, 1), rand_between(0, 1), rand_between(0, 1)), 0.1f * meshScale));
-	// }
+	if (meshFilename == std::string("bedroom")) {
+		for (int i = 0; i < 100; i++) {
+			scenePtr->add (std::make_shared<PointLight>(glm::vec3(rand_between(-meshScale / 2.0 + center[0], meshScale / 2.0 + center[0]), rand_between(-meshScale / 2.0 + center[1], meshScale / 2.0 + center[1]), rand_between(-meshScale / 2.0 + center[2], meshScale / 2.0 + center[2])), glm::vec3(rand_between(0, 1), rand_between(0, 1), rand_between(0, 1)), 0.1f * meshScale));
+		}
+	}
 
 	// Camera
 	int width, height;
@@ -292,8 +327,10 @@ void init () {
 	rasterizerPtr->init (basePath, scenePtr); // Mut be called before creating the scene, to generate an OpenGL context and allow mesh VBOs
 	rayTracers.push_back(make_shared<RayTracer>(false, true));
 	rayTracers.push_back(make_shared<RayTracer>(true, true));
+	rayTracers.push_back(make_shared<RayTracer>(true, true, true));
 	rayTracers.push_back(make_shared<RayTracer>(false, false));
 	rayTracers.push_back(make_shared<RayTracer>(true, false));
+	rayTracers.push_back(make_shared<RayTracer>(true, false, true));
 	for (auto rayTracerPtr : rayTracers) {
 		rayTracerPtr->init(scenePtr);
 	}

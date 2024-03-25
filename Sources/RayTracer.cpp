@@ -16,8 +16,8 @@
 #include <random>
 #include <sstream>
 
-RayTracer::RayTracer(bool useLightCuts, bool renderPreview) : 
-	m_imagePtr (std::make_shared<Image>()), useLightCuts(useLightCuts), renderPreview(renderPreview) {}
+RayTracer::RayTracer(bool useLightCuts, bool renderPreview, bool lightCutsSampling) : 
+	m_imagePtr (std::make_shared<Image>()), useLightCuts(useLightCuts), renderPreview(renderPreview), lightCutsSampling(lightCutsSampling) {}
 
 RayTracer::~RayTracer() {}
 
@@ -83,12 +83,13 @@ RayHit raySceneIntersectionBVH(Ray ray, const std::shared_ptr<Scene> scenePtr) {
 
 LightTree lightCutTree;
 
-void initLightCuts(const std::shared_ptr<Scene> scenePtr) {
+void RayTracer::initLightCuts(const std::shared_ptr<Scene> scenePtr) {
 	std::vector<std::shared_ptr<PointLight>> pls;
 	for (int i = 0; i < scenePtr->numOfPLights(); i++) {
 		pls.push_back(scenePtr->pLight(i));
 	}
 	lightCutTree.build(pls);
+	lightCutTree.enable_sampling = lightCutsSampling;
 }
 
 
@@ -107,11 +108,13 @@ glm::vec3 GetPointLightNative(const std::shared_ptr<Scene> scenePtr, Ray ray, Ra
 	return res;
 }
 
-glm::vec3 GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayHit hit, bool print = false) {
+glm::vec3 RayTracer::GetPointLightCuts(const std::shared_ptr<Scene> scenePtr, Ray ray, RayHit hit, bool print) {
 	glm::vec3 pos = ray.origin + ray.direction * hit.t;
 	glm::vec3 res{0};
 	auto brdfArgs = BRDFArgs{hit.normal, glm::normalize(-ray.direction), glm::vec3{0.0f}};
 	auto lights = lightCutTree.getLights(pos, hit.brdf, brdfArgs, print);
+	sumLightsPerRay += lights.size();
+	cntLightsPerRay += 1;
 	for (auto light : lights) {
 		auto dir = light->getTranslation() - pos;
 		auto dirNorm = glm::length(dir);
@@ -162,17 +165,20 @@ void RayTracer::render (const std::shared_ptr<Scene> scenePtr) {
 						(*m_imagePtr)(w, h) += hit.brdf(BRDFArgs{hit.normal, glm::normalize(-ray.direction), -glm::normalize(dir)}) * light->color * light->intensity;
 					}
 				}
-				if (useLightCuts)
+				if (useLightCuts) {
 					(*m_imagePtr)(w, h) += GetPointLightCuts(scenePtr, ray, hit);
-				else
+				} else {
 					(*m_imagePtr)(w, h) += GetPointLightNative(scenePtr, ray, hit);
+				}
 			}
-
 		}
 	}
 	std::chrono::time_point<std::chrono::high_resolution_clock> after = clock.now();
 	double elapsedTime = (double)std::chrono::duration_cast<std::chrono::milliseconds>(after - before).count();
 	Console::print ("Ray tracing executed in " + std::to_string(elapsedTime) + "ms");
+	if (useLightCuts) {
+		std::cout << 1.0 * sumLightsPerRay / cntLightsPerRay << " light sources evaluated on average" << std::endl;
+	}
 }
 
 

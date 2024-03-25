@@ -1,5 +1,5 @@
 #include "LightCut.hpp"
-
+#include "BVH.hpp"
 #include <vector>
 #include <set>
 #include <memory>
@@ -83,37 +83,46 @@ void LightTree::build(std::vector<std::shared_ptr<PointLight>> lights_) {
     // }
 }
 
-glm::vec3 LightTree::getLight(std::shared_ptr<PointLight> light, glm::vec3 position, const BRDF& brdf, BRDFArgs& args) {
+glm::vec3 LightTree::getLight(LightCutNode node, glm::vec3 position, const BRDF& brdf, BRDFArgs& args) {
+    if (node.last_updated_light == timer) {
+        return node.light;
+    }
+    node.last_updated_light = timer;
+    auto light = selectLightNode(node, true);
     auto dir = light->getTranslation() - position;
     auto dirNorm = glm::length(dir);
     args.lightDir = glm::normalize(dir);
-    return light->color * light->intensity * brdf(args) / dirNorm / dirNorm;
+    return node.light = light->color * light->intensity * brdf(args) / dirNorm / dirNorm;
 }
 
-std::shared_ptr<PointLight> LightTree::selectLightNode(LightCutNode node, double rnd) {
-    if (node.left_idx == -1) {
-        return std::make_shared<PointLight>(*lights[node.light_idx]);
+std::shared_ptr<PointLight> LightTree::selectLightNode(LightCutNode node, bool map_intensity, double rnd) {
+    if (node.left_idx == -1 || !map_intensity) {
+        return lights[node.light_idx];
     }
-    auto res = std::make_shared<PointLight>(*lights[node.light_idx]);
-    res->intensity = node.intensity;
-    return res;
-    // if (rnd < 0) {
-    //     rnd = rand_between(0, node.intensity);
-    // }
-    // if (rnd < tree[node.left_idx].intensity) {
-    //     node.light_idx = tree[node.left_idx].light_idx;
-    //     auto res = selectLightNode(tree[node.left_idx], rnd);
-    //     res->intensity = node.intensity;
-    //     return res;
-    // } else {
-    //     node.light_idx = tree[node.right_idx].light_idx;
-    //     auto res =  selectLightNode(tree[node.right_idx], rnd - tree[node.left_idx].intensity);
-    //     res->intensity = node.intensity;
-    //     return res;
-    // }
+    if (!enable_sampling) {
+        auto res = std::make_shared<PointLight>(*lights[node.light_idx]);
+        res->intensity = node.intensity;
+        return res;
+    } else {
+        if (rnd < 0) {
+            rnd = rand_between(0, node.intensity);
+        }
+        if (rnd < tree[node.left_idx].intensity) {
+            auto res = std::make_shared<PointLight>(*selectLightNode(tree[node.left_idx], rnd));
+            node.light_idx = tree[node.left_idx].light_idx;
+            res->intensity = node.intensity;
+            return res;
+        } else {
+            auto res = std::make_shared<PointLight>(*selectLightNode(tree[node.right_idx], rnd - tree[node.left_idx].intensity));
+            node.light_idx = tree[node.right_idx].light_idx;
+            res->intensity = node.intensity;
+            return res;
+        }
+    }
 }
 
 std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position, const BRDF& brdf, BRDFArgs& args, bool print) {
+    timer++;
     float PI = glm::pi<float>();
     int root = tree.size() - 1;
     auto get_cos_bound = [&](BoundingBox3d bb, glm::vec3 a) {
@@ -139,18 +148,22 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
         auto z_max = std::max(newBB.z_max, newBB.z_min);
         if (z_max <= 0) return 0.0f;
         auto x_min = std::min(std::abs(newBB.x_min), std::abs(newBB.x_max));
-        if (bb.x_max >= 0 && bb.x_min <= 0) x_min = 0.0;
+        if (newBB.x_max >= 0 && newBB.x_min <= 0) x_min = 0.0;
         auto y_min = std::min(std::abs(newBB.y_min), std::abs(newBB.y_max));
-        if (bb.y_max >= 0 && bb.y_min <= 0) y_min = 0.0;
+        if (newBB.y_max >= 0 && newBB.y_min <= 0) y_min = 0.0;
         return z_max / std::sqrt(x_min * x_min + y_min * y_min + z_max * z_max);
     };
 
     auto estimate_error = [&](LightCutNode node) { 
+        if (node.last_updated == timer) {
+            return node.error_bound;
+        }
+        node.last_updated = timer;
         if (node.left_idx == -1) {
-            return glm::vec3(-1.0f);
+            return node.error_bound = glm::vec3(-1.0f);
         }
 
-        auto light = selectLightNode(node); 
+        auto light = selectLightNode(node, true); 
         auto length = glm::length(light->getTranslation() - position);
         float g = 0;
         for (int i = 0; i < 3; i++)  {
@@ -161,33 +174,26 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
             }
         }
         if (g < 0.01f) {
-            return glm::vec3(1e18f);
+            return node.error_bound = glm::vec3(1e18f);
         }
         g = 1.0 / g;
-        glm::vec3 diffuse = brdf.diffuse(args);
 
         float dot_bound = get_cos_bound(node.box, args.normal);
         glm::vec3 r = glm::dot(args.cameraDir, args.normal) * 2 * args.normal - args.cameraDir;
 
         float other_dot_bound = get_cos_bound(node.box, r);
-        glm::vec3 brdf_diffuse = brdf.material->kd * glm::vec3(brdf.material->albedo) / PI;
-        glm::vec3 brdf_specular = brdf.material->ks * glm::vec3(1.0) * 3.0f / PI * other_dot_bound;
+        glm::vec3 diffuse = brdf.material->kd * glm::vec3(1.0) / PI * dot_bound;
+        glm::vec3 specular = brdf.material->ks * glm::vec3(1.0); // * other_dot_bound;
         float v = 1.0f;
-        glm::vec3 m = dot_bound * (brdf_diffuse + brdf_specular);
+        glm::vec3 m = diffuse + specular;
         auto res = node.intensity * g * v * m;
         for (int i = 0; i < 3; i++) {
             res[i] = std::abs(res[i]);
         }
-        return res;// + glm::vec3(1.0) * glm::dot(r, direction));  
-
-        // float m = ;
-        // glm::vec3 cur_estimate = getLight(lights[node.block_start], position, direction, normal, albedo);
-        // glm::vec3 child_estimates = getLight(lights[tree[node.left_idx].block_start], position, direction, normal, albedo) + 
-        //                         getLight(lights[tree[node.right_idx].block_start], position, direction, normal, albedo);
-        // return 1.0 - glm::length(cur_estimate) / glm::length(child_estimates);
+        return node.error_bound = res;
     };
-    glm::vec3 illumination = getLight(selectLightNode(tree[root]), position, brdf, args);
-    float coeff = 0.02;
+    glm::vec3 illumination = getLight(tree[root], position, brdf, args);
+    float coeff = 0.007;
     auto max_comp = [](glm::vec3 v) {
         return std::max(v[0], std::max(v[1], v[2]));
     };
@@ -212,21 +218,25 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
         }
         return ei > ej;
     };
-    std::vector<int> s;
+    s.reserve(1000);
     s.push_back(root);
 
-    while(s.size() < 200) {
+    while(s.size() < 1000) {
         
         std::pop_heap(s.begin(), s.end(), cmp);
         int node = s.back();
         s.pop_back();
         if (tree[node].left_idx == -1) {
-            // std::cout << "found leaf\n";
+            // found leaf
             break;
         }
         auto err_est = estimate_error(tree[node]);
         if (err_est[0] <= coeff * illumination[0] && err_est[1] <= coeff * illumination[1] && err_est[2] <= coeff * illumination[2]) {
-            // std::cerr << err_est[0] << ' ' << err_est[1] << ' ' << err_est[2] << std::endl;
+            // got good approximation
+            break;
+        }
+        if (max_comp(err_est) < 0.01 && max_comp(illumination) < 0.01f) {
+            // point is black and no difference would be seen
             break;
         }
         s.push_back(tree[node].left_idx);
@@ -234,9 +244,11 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
         s.push_back(tree[node].right_idx);
         std::push_heap(s.begin(), s.end(), cmp);
         if (tree[node].light_idx == tree[tree[node].left_idx].light_idx) {
-            illumination += getLight(selectLightNode(tree[tree[node].right_idx]), position, brdf, args);
+            illumination -= tree[node].light / tree[node].intensity * tree[tree[node].right_idx].intensity;
+            illumination += getLight(tree[tree[node].right_idx], position, brdf, args);
         } else {
-            illumination += getLight(selectLightNode(tree[tree[node].left_idx]), position, brdf, args);
+            illumination -= tree[node].light * tree[tree[node].left_idx].intensity;
+            illumination += getLight(tree[tree[node].left_idx], position, brdf, args);    
         }
     }
     std::vector<std::shared_ptr<PointLight>> res;
@@ -244,7 +256,8 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
         std::cout << s.size();
 
     for (int idx : s) {
-        res.push_back(selectLightNode(tree[idx]));
+        res.push_back(selectLightNode(tree[idx], true));
     }
+    s.clear();
     return res;
 }
