@@ -16,8 +16,8 @@
 #include <random>
 #include <sstream>
 
-RayTracer::RayTracer(bool useLightCuts, bool renderPreview, bool lightCutsSampling) : 
-	m_imagePtr (std::make_shared<Image>()), useLightCuts(useLightCuts), renderPreview(renderPreview), lightCutsSampling(lightCutsSampling) {}
+RayTracer::RayTracer(bool useLightCuts, bool renderPreview, bool lightCutsSampling, bool lightCutsOnlyDiffuse) : 
+	m_imagePtr (std::make_shared<Image>()), useLightCuts(useLightCuts), renderPreview(renderPreview), lightCutsSampling(lightCutsSampling), lightCutsOnlyDiffuse(lightCutsOnlyDiffuse) {}
 
 RayTracer::~RayTracer() {}
 
@@ -90,6 +90,7 @@ void RayTracer::initLightCuts(const std::shared_ptr<Scene> scenePtr) {
 	}
 	lightCutTree.build(pls);
 	lightCutTree.enable_sampling = lightCutsSampling;
+	lightCutTree.only_diffuse = lightCutsOnlyDiffuse;
 }
 
 

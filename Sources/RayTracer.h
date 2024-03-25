@@ -27,7 +27,7 @@ using namespace std;
 class RayTracer {
 public:
 	
-	RayTracer(bool useLightCuts = false, bool renderPreview = false, bool lightCutsSampling = false);
+	RayTracer(bool useLightCuts = false, bool renderPreview = false, bool lightCutsSampling = false, bool lightCutsOnlyDiffuse = false);
 	virtual ~RayTracer();
 
 	inline void setResolution (int width, int height) { m_imagePtr = make_shared<Image> (width, height); }
@@ -40,6 +40,7 @@ public:
 	bool useLightCuts;
 	bool renderPreview;
 	bool lightCutsSampling;
+	bool lightCutsOnlyDiffuse;
 	int sumLightsPerRay = 0;
 	int cntLightsPerRay = 0;
 

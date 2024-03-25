@@ -330,6 +330,7 @@ void init () {
 	rayTracers.push_back(make_shared<RayTracer>(true, true, true));
 	rayTracers.push_back(make_shared<RayTracer>(false, false));
 	rayTracers.push_back(make_shared<RayTracer>(true, false));
+	rayTracers.push_back(make_shared<RayTracer>(true, false, false, true));
 	rayTracers.push_back(make_shared<RayTracer>(true, false, true));
 	for (auto rayTracerPtr : rayTracers) {
 		rayTracerPtr->init(scenePtr);

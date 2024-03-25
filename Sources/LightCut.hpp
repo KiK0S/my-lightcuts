@@ -33,4 +33,5 @@ struct LightTree {
     std::vector<int> s;
     int timer = 0;
     bool enable_sampling = false;
+    bool only_diffuse = false;
 };
