@@ -183,7 +183,7 @@ std::vector<std::shared_ptr<PointLight>> LightTree::getLights(glm::vec3 position
 
         float other_dot_bound = get_cos_bound(node.box, r);
         glm::vec3 diffuse = brdf.material->kd * glm::vec3(1.0) / PI * dot_bound;
-        glm::vec3 specular = brdf.material->ks * glm::vec3(1.0); // * other_dot_bound;
+        glm::vec3 specular = brdf.material->ks * glm::vec3(1.0) * other_dot_bound;
         float v = 1.0f;
         glm::vec3 m = diffuse + specular;
         auto res = node.intensity * g * v * m;
