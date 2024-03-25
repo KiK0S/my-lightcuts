@@ -97,7 +97,7 @@ void Rasterizer::render (std::shared_ptr<Scene> scenePtr) {
 		m_pbrShaderProgramPtr->set ((prefix + std::to_string(i) + std::string("].intensity")).c_str(),light->intensity);
 	}
     m_pbrShaderProgramPtr->set("lightCnt", (int)numOfLights);
-    size_t numOfPLights = std::min(scenePtr->numOfPLights (), (size_t)50);
+    size_t numOfPLights = scenePtr->numOfPLights ();
 	for (size_t i = 0; i < numOfPLights; i++) {
 		std::shared_ptr<PointLight> light = scenePtr->pLight(i);
 		std::string prefix = std::string("pointlightSources[");
