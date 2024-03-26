@@ -45,6 +45,6 @@ _in case you are Tamy Boubekeur: these images are generated with the same code v
 |desk|Lightcuts, only diffuse bounded| 490s | 126.2 | ![](img/desk-3.png)|
 |desk|Lightcuts + sampling | 462s | 107.7 | ![](img/desk-4.png)|
 |desk-red|Rasterizer| 0s | 216 | ![](img/desk-red-0.png)|
-|desk-red|Ray tracer| 93s | 216 | ![](img/desk-red-0.png)|
-|desk-red|Lightcuts| 415s | 159.1 | ![](img/desk-red-0.png)|
-|desk-red|Lightcuts + sampling| 393s | 132.3 | ![](img/desk-red-0.png)|
+|desk-red|Ray tracer| 93s | 216 | ![](img/desk-red-1.png)|
+|desk-red|Lightcuts| 415s | 159.1 | ![](img/desk-red-2.png)|
+|desk-red|Lightcuts + sampling| 393s | 132.3 | ![](img/desk-red-3.png)|
