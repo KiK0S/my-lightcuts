@@ -29,9 +29,6 @@ build/MyRenderer bedroom
 
 ## Demo, benchmarks
 
-_in case you are Tamy Boubekeur: these images are generated with the same code version as submitted for grading. It just took overnight to generate some of images_
-
-
 |Demo name|Rendering method|Time elapsed|Lights evaluated|Image|
 |:---:|:---:|:---:|:---:|:----:|
 |bedroom|Rasterizer| 0s | 216 | ![](img/bedroom-hq-0.png)|
